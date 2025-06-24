@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Output CSV files
-*.csv
-
 # Python virtual environments
 venv/
 .env/
