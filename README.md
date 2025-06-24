@@ -1,71 +1,94 @@
 # PAN-OS Address/Object Group Management Scripts
 
-This repository contains a set of Python scripts to **export, delete, and recreate** address objects and address groups on **Palo Alto Networks Panorama** using the XML API.
+This repository provides Python scripts to **export, delete, and recreate** address objects and address groups on **Palo Alto Networks Panorama**, using the XML API.
 
-## 📦 Contents
+## 📦 Script Overview
 
 | Script Name                  | Description |
 |-----------------------------|-------------|
-| `delete_address_objects.py` | Exports and deletes address objects from Panorama, saving a CSV for later reimport. |
-| `delete_address_groups.py`  | Exports and deletes address groups from Panorama, saving a CSV for later reimport. |
-| `create_address_objects.py` | Recreates address objects from a previously exported CSV. |
-| `create_address_groups.py`  | Recreates address groups (static or dynamic) from a previously exported CSV. |
+| `delete_address_objects.py` | Exports and deletes address objects, writing a timestamped CSV backup |
+| `delete_address_groups.py`  | Exports and deletes address groups (static/dynamic), writing a CSV |
+| `create_address_objects.py` | Recreates address objects from a CSV |
+| `create_address_groups.py`  | Recreates address groups from a CSV |
 
-## 📝 Requirements
+## 🧰 Requirements
 
 - Python 3.x
-- `requests` module (install with `pip3 install --user requests`)
-- Access to the Panorama API and a valid API key
+- `requests` module (installed automatically inside `.venv`)
+- Panorama XML API access
+- API key (entered at runtime)
 
 ## 🔐 Authentication
 
-Each script prompts for your Panorama API key at runtime using a secure input prompt (`getpass`).
+You will be prompted to enter your **API key** at runtime via secure input (`getpass`).
 
-## 📂 CSV Formats
+## 🔧 Configuration File: `.panos.cfg`
 
-### `address_objects.csv`
+The scripts use a config file for hostname and CSV filenames. Example:
 
-| name          | ip-netmask       | description     | location     | type         | tag        |
-|---------------|------------------|------------------|--------------|--------------|------------|
-| web-server-1  | 192.168.1.10/32  | Web frontend     | Branch-FWs   | ip-netmask   | external   |
-| db-server-1   | 192.168.2.20/32  | Database server  | shared       | ip-netmask   | internal   |
+```ini
+[PANW]
+host = https://your-panorama-host
+address_csv = sample-address_objects.csv
+address_group_csv = sample-address_groups.csv
+```
 
-### `address_groups.csv`
+- **`host`**: The Panorama hostname or IP
+- **`address_csv`**: Path to input/output file for address objects
+- **`address_group_csv`**: Path to input/output file for address groups
+
+> ⚠️ Do **not** include your API key in this file for security reasons.
+
+## 📂 CSV Format
+
+### Address Objects
+
+| name         | ip-netmask       | description     | location     | type         | tag        |
+|--------------|------------------|------------------|--------------|--------------|------------|
+| web-server-1 | 192.168.1.10/32  | Web frontend     | Branch-FWs   | ip-netmask   | external   |
+
+### Address Groups
 
 | name         | members                   | dynamic           | description              | location    | tag       |
 |--------------|----------------------------|-------------------|---------------------------|-------------|-----------|
 | web-servers  | web-server-1,api-gateway   |                   | Group of all web servers | Branch-FWs  | external  |
 | api-group    |                            | 'tag eq dmz'      | Dynamic group for DMZ    | DataCenter  |           |
 
-- **location**: Use `"shared"` for Shared scope, or specify a Panorama device group name.
-- **members**: Comma-separated list of object names for static groups.
-- **dynamic**: Filter string for dynamic groups (optional).
+- Use `location = shared` for shared config scope.
+- `members` is comma-separated for static groups.
+- `dynamic` is a filter expression for dynamic groups.
 
-## ✅ Example Usage
+## ▶️ Usage
 
-### Delete and Export
-
-```bash
-python3 delete_address_objects.py
-python3 delete_address_groups.py
-```
-
-### Recreate from CSV
+Use the included wrapper script for convenience:
 
 ```bash
-python3 create_address_objects.py
-python3 create_address_groups.py
+chmod +x panw-wrapper.py
+./panw-wrapper.py delete-objects
+./panw-wrapper.py create-groups
 ```
+
+Available actions:
+- `delete-objects`
+- `delete-groups`
+- `create-objects`
+- `create-groups`
+
+The wrapper will:
+- Create a `.venv` (if needed)
+- Install `requests`
+- Execute the selected script in the venv
 
 ## 🔒 Security Notes
 
-- SSL verification is disabled in these scripts (`verify=False`) for compatibility. You should secure this for production use.
-- API keys should be stored securely or rotated regularly.
+- API key is never stored; it is prompted per run.
+- SSL certificate verification is disabled in scripts (`verify=False`) for compatibility.
+- Consider locking down access to `.panos.cfg` and generated CSV files.
 
 ## 📄 License
 
-MIT License – free to use and adapt.
+MIT License
 
-## 🙋‍♂️ Questions?
+## 🙋 Need Help?
 
-Open an issue or contact your automation team.
+Open an issue or contact your automation/security team.
