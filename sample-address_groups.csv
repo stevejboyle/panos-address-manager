@@ -1,0 +1,4 @@
+name,members,dynamic,description,location,tag
+web-servers,"web-server-1,api-gateway",,Group of all web servers,Branch-FWs,external
+db-group,db-server-1,,Database servers,shared,internal
+api-group,,'tag eq dmz',Dynamic group for DMZ-tagged objects,DataCenter,
