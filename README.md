@@ -3,6 +3,19 @@ A simple and robust command-line toolkit for bulk managing address objects and a
 
 This toolset is designed for network administrators and automation engineers to perform common, repetitive tasks safely and efficiently. All operations are driven by a central wrapper script, panw-wrapper.py, which handles environment setup and execution.
 
+📋 Table of Contents
+Features
+
+Getting Started
+
+Available Actions
+
+CSV File Formats
+
+Security Notes
+
+License
+
 ✨ Features
 Unified Wrapper Script: A single entry point (panw-wrapper.py) for all actions.
 
