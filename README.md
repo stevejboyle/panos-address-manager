@@ -1,6 +1,5 @@
 # PAN-OS Address Object & Group Manager
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A simple and robust command-line toolkit for bulk managing address objects and address groups on Palo Alto Networks Panorama via the XML API.
 
@@ -15,7 +14,6 @@ This toolset is designed for network administrators and automation engineers to 
 - [Available Actions](#️-available-actions)
 - [CSV File Formats](#-csv-file-formats)
 - [Security Notes](#-security-notes)
-- [License](#-license)
 
 ---
 
@@ -124,8 +122,3 @@ This file is for static and dynamic address groups.
 - SSL certificate verification is disabled by default for lab environments. In a production environment, you should ensure Panorama's certificate is trusted by the system running the script.
 - The `panw.cfg` file and any CSV files may contain sensitive network information. Restrict access to these files as per your organization's security policy.
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
