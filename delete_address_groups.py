@@ -4,26 +4,48 @@ import urllib3
 from getpass import getpass
 from datetime import datetime
 import configparser
+import xml.etree.ElementTree as ET
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# --- Configuration ---
 config = configparser.ConfigParser()
-config.read("panw.cfg")
+# Ensure you have a 'panw.cfg' file in the same directory
+# with a section like:
+# [PANW]
+# panorama_host = https://your_panorama_ip
+# address_group_csv = address_groups_to_delete.csv
+try:
+    config.read("panw.cfg")
+    PANORAMA_HOST = config.get("PANW", "panorama_host")
+    CSV_FILE = config.get("PANW", "address_group_csv")
+except (configparser.NoSectionError, configparser.NoOptionError) as e:
+    print(f"Error reading configuration file: {e}")
+    print("Please ensure 'panw.cfg' exists and is correctly formatted.")
+    exit()
 
-PANORAMA_HOST = config.get("PANW", "panorama_host")
-CSV_FILE = config.get("PANW", "address_group_csv")
 API_KEY = getpass("Enter PAN-OS API Key: ")
 
+# --- Output File Setup ---
 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-OUTPUT_FILE = f"{timestamp}-address-group.csv"
+OUTPUT_FILE = f"{timestamp}-address-group-backup.csv"
+OUT_FIELDS = ["name", "members", "dynamic_filter", "description", "location", "tag"]
 
-out_fields = ["name", "members", "dynamic", "description", "location", "tag"]
 with open(OUTPUT_FILE, mode='w', newline='') as f:
-    writer = csv.DictWriter(f, fieldnames=out_fields)
+    writer = csv.DictWriter(f, fieldnames=OUT_FIELDS)
     writer.writeheader()
 
 def export_then_delete_address_group(name, device_group=None):
+    """
+    Exports an address group to a CSV file and then deletes it from Panorama.
+
+    Args:
+        name (str): The name of the address group to delete.
+        device_group (str, optional): The device group where the address group resides.
+                                     Defaults to None for a 'Shared' location.
+    """
     is_shared = not device_group or device_group.strip().lower() == "shared"
+    location = "shared" if is_shared else device_group.strip()
 
     if is_shared:
         xpath = f"/config/shared/address-group/entry[@name='{name}']"
@@ -32,7 +54,10 @@ def export_then_delete_address_group(name, device_group=None):
                  f"/device-group/entry[@name='{device_group.strip()}']"
                  f"/address-group/entry[@name='{name}']")
 
-    print(f"[*] Exporting and deleting: {name} via XPath: {xpath}")
+    print(f"[*] Processing: '{name}' in '{location}'")
+    print(f"    XPath: {xpath}")
+
+    # --- Step 1: Get the address group configuration ---
     export_params = {
         'type': 'config',
         'action': 'get',
@@ -40,76 +65,96 @@ def export_then_delete_address_group(name, device_group=None):
         'key': API_KEY
     }
 
-    response = requests.get(f"{PANORAMA_HOST}/api/", params=export_params, verify=False)
-    if "<entry" not in response.text:
-        print(f"[!] Could not find address-group '{name}'")
+    try:
+        response = requests.get(f"{PANORAMA_HOST}/api/", params=export_params, verify=False, timeout=10)
+        response.raise_for_status() # Raise an exception for bad status codes
+    except requests.exceptions.RequestException as e:
+        print(f"[!] HTTP Request failed: {e}")
         return
 
-    values = {"name": name, "location": device_group or "shared"}
+    # --- Step 2: Parse the XML response and back up the details ---
+    try:
+        root = ET.fromstring(response.content)
+        entry = root.find('.//entry')
 
-    if "<dynamic>" in response.text:
-        start = response.text.find("<dynamic>") + len("<dynamic>")
-        end = response.text.find("</dynamic>", start)
-        values["dynamic"] = response.text[start:end].strip()
-        values["members"] = ""
-    else:
-        values["dynamic"] = ""
-        if "<static>" in response.text:
-            start = response.text.find("<static>")
-            end = response.text.find("</static>", start)
-            member_block = response.text[start:end]
-            members = []
-            for line in member_block.splitlines():
-                line = line.strip()
-                if line.startswith("<member>") and line.endswith("</member>"):
-                    member_value = line.replace("<member>", "").replace("</member>", "").strip()
-                    members.append(member_value)
-            values["members"] = ",".join(members)
+        if entry is None:
+            print(f"[!] Could not find address-group '{name}' in '{location}'.")
+            return
+
+        values = {"name": name, "location": location}
+
+        # Extract members (static or dynamic)
+        static_members = [m.text for m in entry.findall('./static/member')]
+        dynamic_filter = entry.find('./dynamic/filter')
+
+        if static_members:
+            values["members"] = ",".join(static_members)
+            values["dynamic_filter"] = ""
+        elif dynamic_filter is not None:
+            values["members"] = ""
+            values["dynamic_filter"] = dynamic_filter.text
         else:
             values["members"] = ""
+            values["dynamic_filter"] = ""
 
-    if "<description>" in response.text:
-        start = response.text.find("<description>") + len("<description>")
-        end = response.text.find("</description>", start)
-        values["description"] = response.text[start:end].strip()
-    else:
-        values["description"] = ""
+        # Extract description and tags
+        description = entry.find('description')
+        values["description"] = description.text if description is not None else ""
 
-    if "<tag>" in response.text:
-        tag_start = response.text.find("<tag>")
-        tag_end = response.text.find("</tag>", tag_start)
-        tag_block = response.text[tag_start:tag_end]
-        tags = [line.replace("<member>", "").replace("</member>", "").strip()
-                for line in tag_block.splitlines() if "<member>" in line]
+        tags = [t.text for t in entry.findall('./tag/member')]
         values["tag"] = ",".join(tags)
-    else:
-        values["tag"] = ""
 
-    with open(OUTPUT_FILE, mode='a', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=out_fields)
-        writer.writerow(values)
+        # Write the extracted data to the backup CSV
+        with open(OUTPUT_FILE, mode='a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=OUT_FIELDS)
+            writer.writerow(values)
+        print(f"[✓] Successfully backed up '{name}'.")
 
+    except ET.ParseError as e:
+        print(f"[!] Failed to parse XML response for '{name}': {e}")
+        print(f"    Response Text: {response.text}")
+        return
+
+    # --- Step 3: Delete the address group ---
     delete_params = {
         'type': 'config',
         'action': 'delete',
         'xpath': xpath,
         'key': API_KEY
     }
-    del_resp = requests.get(f"{PANORAMA_HOST}/api/", params=delete_params, verify=False)
-    if "<result>success</result>" in del_resp.text:
-        print(f"[✓] Deleted address-group '{name}' from {device_group or 'Shared'}")
-    else:
-        print(f"[!] Failed to delete '{name}': {del_resp.text}")
+
+    try:
+        del_resp = requests.get(f"{PANORAMA_HOST}/api/", params=delete_params, verify=False, timeout=10)
+        del_resp.raise_for_status()
+
+        if 'status="success"' in del_resp.text:
+            print(f"[✓] Successfully deleted address-group '{name}' from '{location}'.")
+        else:
+            print(f"[!] Failed to delete '{name}': {del_resp.text}")
+
+    except requests.exceptions.RequestException as e:
+        print(f"[!] HTTP Request failed during deletion: {e}")
+
 
 def main():
-    with open(CSV_FILE, newline='') as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader, None)
-        for row in reader:
-            name = row[0].strip()
-            device_group = row[1].strip() if len(row) > 1 else None
-            if name:
-                export_then_delete_address_group(name, device_group)
+    """
+    Main function to read a CSV and initiate the deletion process.
+    """
+    try:
+        with open(CSV_FILE, newline='') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader, None)  # Skip header row
+            for row in reader:
+                if not row:
+                    continue
+                name = row[0].strip()
+                device_group = row[1].strip() if len(row) > 1 and row[1].strip() else None
+                if name:
+                    export_then_delete_address_group(name, device_group)
+    except FileNotFoundError:
+        print(f"[!] Error: The input file '{CSV_FILE}' was not found.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
     main()

@@ -1,94 +1,185 @@
-# PAN-OS Address/Object Group Management Scripts
+PAN-OS Address Object & Group Manager
+A simple and robust command-line toolkit for bulk managing address objects and address groups on Palo Alto Networks Panorama via the XML API.
 
-This repository provides Python scripts to **export, delete, and recreate** address objects and address groups on **Palo Alto Networks Panorama**, using the XML API.
+This toolset is designed for network administrators and automation engineers to perform common, repetitive tasks safely and efficiently. All operations are driven by a central wrapper script, panw-wrapper.py, which handles environment setup and execution.
 
-## 📦 Script Overview
+✨ Features
+Unified Wrapper Script: A single entry point (panw-wrapper.py) for all actions.
 
-| Script Name                  | Description |
-|-----------------------------|-------------|
-| `delete_address_objects.py` | Exports and deletes address objects, writing a timestamped CSV backup |
-| `delete_address_groups.py`  | Exports and deletes address groups (static/dynamic), writing a CSV |
-| `create_address_objects.py` | Recreates address objects from a CSV |
-| `create_address_groups.py`  | Recreates address groups from a CSV |
+Automated Environment: Automatically creates a Python virtual environment (.venv) and installs dependencies.
 
-## 🧰 Requirements
+Backup and Restore: Export existing objects to a CSV file before deleting, allowing for easy recovery.
 
-- Python 3.x
-- `requests` module (installed automatically inside `.venv`)
-- Panorama XML API access
-- API key (entered at runtime)
+Bulk Creation: Create objects and groups in bulk by populating a simple CSV file.
 
-## 🔐 Authentication
+Cross-Platform: The wrapper script is compatible with Windows, macOS, and Linux.
 
-You will be prompted to enter your **API key** at runtime via secure input (`getpass`).
+Secure: Prompts for your API key at runtime and never stores it on disk.
 
-## 🔧 Configuration File: `.panos.cfg`
+🚀 Getting Started
+1. Prerequisites
+Python 3.7+
 
-The scripts use a config file for hostname and CSV filenames. Example:
+2. Configuration (panw.cfg)
+Before running the tool, create a configuration file named panw.cfg in the same directory. This file tells the scripts where to find your Panorama instance and which CSV files to use.
 
-```ini
+Example panw.cfg:
+
 [PANW]
-host = https://your-panorama-host
-address_csv = sample-address_objects.csv
-address_group_csv = sample-address_groups.csv
-```
+panorama_host = https://your-panorama-address
+address_csv = inventory/address-objects.csv
+address_group_csv = inventory/address-groups.csv
 
-- **`host`**: The Panorama hostname or IP
-- **`address_csv`**: Path to input/output file for address objects
-- **`address_group_csv`**: Path to input/output file for address groups
+panorama_host: The full URL to your Panorama management interface.
 
-> ⚠️ Do **not** include your API key in this file for security reasons.
+address_csv: The path to the CSV file for managing address objects.
 
-## 📂 CSV Format
+address_group_csv: The path to the CSV file for managing address groups.
 
-### Address Objects
+💡 Tip: It's a good practice to store your CSV files in a subdirectory like inventory/ to keep the project organized.
 
-| name         | ip-netmask       | description     | location     | type         | tag        |
-|--------------|------------------|------------------|--------------|--------------|------------|
-| web-server-1 | 192.168.1.10/32  | Web frontend     | Branch-FWs   | ip-netmask   | external   |
+3. Running the Tool
+All scripts should be executed through the panw-wrapper.py script. It's the only file you need to interact with directly.
 
-### Address Groups
+First, make the wrapper executable (on macOS/Linux):
 
-| name         | members                   | dynamic           | description              | location    | tag       |
-|--------------|----------------------------|-------------------|---------------------------|-------------|-----------|
-| web-servers  | web-server-1,api-gateway   |                   | Group of all web servers | Branch-FWs  | external  |
-| api-group    |                            | 'tag eq dmz'      | Dynamic group for DMZ    | DataCenter  |           |
-
-- Use `location = shared` for shared config scope.
-- `members` is comma-separated for static groups.
-- `dynamic` is a filter expression for dynamic groups.
-
-## ▶️ Usage
-
-Use the included wrapper script for convenience:
-
-```bash
 chmod +x panw-wrapper.py
+
+Then, run the desired action. The wrapper will handle creating a virtual environment and installing dependencies on the first run.
+
+# To delete address objects (and create a backup)
 ./panw-wrapper.py delete-objects
+
+# To create address groups from a CSV file
 ./panw-wrapper.py create-groups
-```
 
-Available actions:
-- `delete-objects`
-- `delete-groups`
-- `create-objects`
-- `create-groups`
+▶️ Available Actions
+The following actions are available:
 
-The wrapper will:
-- Create a `.venv` (if needed)
-- Install `requests`
-- Execute the selected script in the venv
+Action
 
-## 🔒 Security Notes
+Description
 
-- API key is never stored; it is prompted per run.
-- SSL certificate verification is disabled in scripts (`verify=False`) for compatibility.
-- Consider locking down access to `.panos.cfg` and generated CSV files.
+create-objects
 
-## 📄 License
+Creates address objects from the address_csv file.
 
-MIT License
+delete-objects
 
-## 🙋 Need Help?
+Deletes objects listed in address_csv, creating a backup first.
 
-Open an issue or contact your automation/security team.
+create-groups
+
+Creates address groups from the address_group_csv file.
+
+delete-groups
+
+Deletes groups listed in address_group_csv, creating a backup first.
+
+📂 CSV File Formats
+The scripts use specific headers in the CSV files. When a backup is created, it will automatically use this format.
+
+Address Objects (address_csv)
+This file is for ip-netmask, ip-range, and fqdn objects.
+
+name
+
+value
+
+type
+
+description
+
+location
+
+tag
+
+web-server-1
+
+192.168.1.10/32
+
+ip-netmask
+
+Web frontend
+
+Branch-FWs
+
+external,pci
+
+corp-dns
+
+dns.example.com
+
+fqdn
+
+Corporate DNS
+
+shared
+
+internal
+
+guest-range
+
+10.100.0.1-10.100.0.254
+
+ip-range
+
+Guest WiFi Range
+
+Guest-DG
+
+
+
+type: Must be one of ip-netmask, ip-range, or fqdn.
+
+location: The Panorama Device Group. Use shared for shared objects.
+
+Address Groups (address_group_csv)
+This file is for static and dynamic address groups.
+
+name
+
+members
+
+dynamic_filter
+
+description
+
+location
+
+tag
+
+web-servers
+
+web-server-1,corp-dns
+
+
+
+Group of all web servers
+
+Branch-FWs
+
+external
+
+dmz-dynamic
+
+
+
+'dmz'
+
+Dynamic group for DMZ
+
+DataCenter
+
+
+
+For static groups, populate the members column with a comma-separated list of address object names.
+
+For dynamic groups, populate the dynamic_filter column with the filter criteria (e.g., 'tag1' and 'tag2'). Leave members empty.
+
+🔒 Security Notes
+Your API key is prompted for on each run and is never stored on disk.
+
+SSL certificate verification is disabled by default for lab environments. In a production environment, you should ensure Panorama's certificate is trusted by the system running the script.
+
+The panw.cfg file and any CSV files may contain sensitive network information. Restrict access to these files as per your organization's security policy.
