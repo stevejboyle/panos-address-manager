@@ -1,4 +1,4 @@
-name,ip-netmask,description,location,type,tag
-web-server-1,192.168.1.10/32,Web frontend,Branch-FWs,ip-netmask,external
-db-server-1,192.168.2.20/32,Database server,shared,ip-netmask,internal
-api-gateway,10.10.10.5/32,API Gateway,DataCenter,ip-netmask,dmz
+name,value,description,location,type,tag
+web-server-1,"192.168.1.10/32","Web frontend",Perimeter,ip-netmask,external
+db-server-1,192.168.2.20/32,"Database server",shared,ip-netmask,internal
+api-gateway,10.10.10.5/32,"API Gateway",shared,ip-netmask,dmz
