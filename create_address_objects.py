@@ -25,7 +25,6 @@ except (configparser.NoSectionError, configparser.NoOptionError) as e:
 
 API_KEY = getpass("Enter PAN-OS API Key: ")
 
-
 def create_address_object(row):
     """
     Creates a Panorama address object based on a row from a CSV file.
@@ -98,7 +97,7 @@ def create_address_object(row):
         "key": API_KEY
     }
 
-    print(f"[*] Attempting to create address object '{name}' in '{location}'...")
+    print(f"[*] Attempting to create address object '{name}' in '{location}'...'{params}'...")
     try:
         response = requests.get(f"{PANORAMA_HOST}/api/", params=params, verify=False, timeout=10)
         response.raise_for_status()
@@ -129,13 +128,7 @@ def main():
     try:
         with open(CSV_FILE, newline='', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
-            # Skip example row if present from backup file
-            if "Example Name" in f.read():
-                f.seek(0) # Go back to the start of the file
-                next(reader) # Skip header
-                next(reader) # Skip example
             f.seek(0)
-            next(reader)
 
             for row in reader:
                 # Ensure we don't process an empty row

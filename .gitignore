@@ -12,3 +12,4 @@ venv/
 
 # Logs or debug
 *.log
+panw.cfg
