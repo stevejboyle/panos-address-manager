@@ -5,6 +5,7 @@ __pycache__/
 
 # Python virtual environments
 venv/
+.venv/
 .env/
 
 # macOS metadata
@@ -13,3 +14,6 @@ venv/
 # Logs or debug
 *.log
 panw.cfg
+
+# Backups written by the delete scripts (contain network config)
+*-backup.csv

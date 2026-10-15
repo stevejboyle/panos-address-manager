@@ -2,7 +2,6 @@
 import argparse
 import subprocess
 import sys
-import os
 from pathlib import Path
 
 # --- Configuration ---
@@ -80,7 +79,7 @@ def setup_venv():
         print("[✓] Virtual environment setup complete.")
 
     except subprocess.CalledProcessError as e:
-        print(f"[!] Failed to install dependencies.", file=sys.stderr)
+        print("[!] Failed to install dependencies.", file=sys.stderr)
         print(f"    - Command: {' '.join(e.cmd)}", file=sys.stderr)
         print(f"    - Error: {e.stderr.decode() if e.stderr else 'No stderr'}", file=sys.stderr)
         sys.exit(1)
