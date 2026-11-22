@@ -131,3 +131,8 @@ This file is for static and dynamic address groups.
 - Object and device-group names are quoted safely in XPath expressions, so names containing quotes can't alter the query.
 - The `panw.cfg` file and any CSV files may contain sensitive network information. Restrict access to these files as per your organization's security policy.
 
+---
+
+## Disclaimer
+
+An independent, personally maintained project by Steve Boyle. It is not official Palo Alto Networks software and is not affiliated with, endorsed by, or supported by Palo Alto Networks. Palo Alto Networks, PAN-OS and Panorama are trademarks of Palo Alto Networks, Inc., used here only to describe what the scripts work with. Test against a lab Panorama before using it on production configuration.
